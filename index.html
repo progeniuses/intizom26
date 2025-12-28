@@ -1,0 +1,2561 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life OS - Personal Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-tertiary: #1e1e1e;
+            --bg-hover: #252525;
+            --accent: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.3);
+            --accent-secondary: #6366f1;
+            --accent-tertiary: #f59e0b;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #52525b;
+            --border: #27272a;
+            --border-light: #3f3f46;
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 1.3rem;
+        }
+
+        .sidebar-logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 15px 10px;
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            margin-bottom: 25px;
+        }
+
+        .nav-section-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            padding: 0 10px;
+            margin-bottom: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--bg-tertiary);
+            color: var(--accent);
+        }
+
+        .nav-item svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-footer {
+            padding: 15px;
+            border-top: 1px solid var(--border);
+        }
+
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Main Content */
+        .main {
+            margin-left: 260px;
+            min-height: 100vh;
+        }
+
+        /* Top Bar */
+        .topbar {
+            position: sticky;
+            top: 0;
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 50;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .breadcrumb span {
+            color: var(--text-primary);
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .topbar-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .topbar-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--border-light);
+        }
+
+        .topbar-btn.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .topbar-btn.primary:hover {
+            filter: brightness(1.1);
+        }
+
+        /* Page Content */
+        .page-content {
+            padding: 30px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Page Header */
+        .page-header {
+            margin-bottom: 30px;
+        }
+
+        .page-cover {
+            width: 100%;
+            height: 200px;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #1a472a 0%, #065f46 50%, #064e3b 100%);
+            cursor: pointer;
+        }
+
+        .page-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .page-cover-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .page-cover:hover .page-cover-overlay {
+            opacity: 1;
+        }
+
+        .page-cover-btn {
+            background: rgba(255,255,255,0.9);
+            color: var(--bg-primary);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .page-title-section {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .page-icon {
+            width: 70px;
+            height: 70px;
+            background: var(--bg-tertiary);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .page-icon:hover {
+            border-color: var(--accent);
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            outline: none;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            width: 100%;
+            font-family: inherit;
+        }
+
+        .page-title:empty::before {
+            content: 'Sarlavha kiriting...';
+            color: var(--text-muted);
+        }
+
+        .page-description {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            outline: none;
+            border: none;
+            background: transparent;
+            width: 100%;
+            margin-top: 8px;
+            font-family: inherit;
+        }
+
+        .page-description:empty::before {
+            content: 'Tavsif qo\'shing...';
+            color: var(--text-muted);
+        }
+
+        /* Widget Grid */
+        .widget-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        /* Widget Card */
+        .widget {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .widget.hidden-filter {
+            display: none;
+        }
+
+        .widget:hover {
+            border-color: var(--border-light);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+
+        .widget.dragging {
+            opacity: 0.5;
+            transform: scale(1.02);
+        }
+
+        .widget.large {
+            grid-column: span 2;
+        }
+
+        .widget-header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            cursor: grab;
+        }
+
+        .widget-header:active {
+            cursor: grabbing;
+        }
+
+        .widget-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .widget-title-icon {
+            font-size: 1.1rem;
+        }
+
+        .widget-title input {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.95rem;
+            outline: none;
+            font-family: inherit;
+            width: 150px;
+        }
+
+        .widget-actions {
+            display: flex;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .widget:hover .widget-actions {
+            opacity: 1;
+        }
+
+        .widget-action-btn {
+            background: var(--bg-tertiary);
+            border: none;
+            color: var(--text-muted);
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .widget-action-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .widget-action-btn.danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .widget-body {
+            padding: 20px;
+        }
+
+        .empty-state {
+            padding: 24px;
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            color: var(--text-secondary);
+            background: var(--bg-tertiary);
+            text-align: center;
+        }
+
+        /* Stats Widgets */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .stat-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-sub {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Clock Widget */
+        .clock-display {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .clock-box {
+            background: linear-gradient(135deg, var(--accent), #059669);
+            color: white;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3rem;
+            font-weight: 700;
+            padding: 15px 25px;
+            border-radius: 12px;
+            min-width: 100px;
+            text-align: center;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .clock-label {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            margin-top: 8px;
+        }
+
+        .date-display {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Todo Widget */
+        .todo-input-wrapper {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .todo-input {
+            flex: 1;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .todo-input:focus {
+            border-color: var(--accent);
+        }
+
+        .todo-add-btn {
+            background: var(--accent);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .todo-add-btn:hover {
+            filter: brightness(1.1);
+        }
+
+        .todo-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .todo-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .todo-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .todo-item.completed .todo-checkbox {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .todo-item.completed .todo-checkbox::after {
+            content: '✓';
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .todo-text {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+
+        .todo-text input {
+            background: transparent;
+            border: none;
+            color: inherit;
+            font-size: inherit;
+            outline: none;
+            width: 100%;
+            font-family: inherit;
+        }
+
+        .todo-time {
+            margin-left: auto;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .todo-time input {
+            background: transparent;
+            border: none;
+            color: inherit;
+            font-size: inherit;
+            outline: none;
+            width: 80px;
+            text-align: right;
+            font-family: inherit;
+        }
+
+        .todo-item.completed .todo-time {
+            color: var(--text-muted);
+        }
+
+        .todo-delete {
+            opacity: 0;
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            padding: 5px;
+            transition: opacity 0.2s;
+        }
+
+        .todo-item:hover .todo-delete {
+            opacity: 1;
+        }
+
+        /* Notes Widget */
+        .note-textarea {
+            width: 100%;
+            min-height: 150px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            outline: none;
+            resize: vertical;
+            font-family: inherit;
+            line-height: 1.7;
+        }
+
+        .note-textarea:focus {
+            border-color: var(--accent);
+        }
+
+        /* Goals Widget */
+        .goal-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+
+        .goal-icon {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            cursor: pointer;
+        }
+
+        .goal-info {
+            flex: 1;
+        }
+
+        .goal-name {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-weight: 500;
+            outline: none;
+            width: 100%;
+            font-family: inherit;
+        }
+
+        .goal-progress-bar {
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .goal-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .goal-progress-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        /* Habits Widget */
+        .habit-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .habit-item:last-child {
+            border-bottom: none;
+        }
+
+        .habit-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .habit-emoji {
+            font-size: 1.3rem;
+            cursor: pointer;
+        }
+
+        .habit-name input {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .habit-days {
+            display: flex;
+            gap: 5px;
+        }
+
+        .habit-day {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .habit-day:hover {
+            border-color: var(--accent);
+        }
+
+        .habit-day.done {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        /* Image Widget */
+        .image-widget-content {
+            position: relative;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .image-widget-content img {
+            width: 100%;
+            height: auto;
+            max-height: 300px;
+            object-fit: cover;
+        }
+
+        .image-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-muted);
+            padding: 40px;
+        }
+
+        .image-placeholder svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        /* Quote Widget */
+        .quote-text {
+            font-size: 1.15rem;
+            font-style: italic;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            text-align: center;
+            padding: 20px;
+            background: transparent;
+            border: none;
+            width: 100%;
+            outline: none;
+            font-family: inherit;
+            resize: none;
+        }
+
+        .quote-author {
+            text-align: center;
+            color: var(--accent);
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        .quote-author input {
+            background: transparent;
+            border: none;
+            color: var(--accent);
+            text-align: center;
+            outline: none;
+            font-family: inherit;
+        }
+
+        /* Weather Widget */
+        .weather-location {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-bottom: 15px;
+        }
+
+        .weather-location input {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .weather-main {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .weather-icon {
+            font-size: 4rem;
+        }
+
+        .weather-temp {
+            font-size: 3rem;
+            font-weight: 700;
+        }
+
+        .weather-desc {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Progress Widget */
+        .progress-item {
+            margin-bottom: 20px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .progress-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .progress-label input {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            outline: none;
+            font-family: inherit;
+            width: 120px;
+        }
+
+        .progress-value {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.85rem;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: var(--bg-tertiary);
+            border-radius: 5px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+            border-radius: 5px;
+            transition: width 0.3s ease;
+        }
+
+        /* Add Widget Button */
+        .add-widget-card {
+            background: var(--bg-secondary);
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            gap: 10px;
+            color: var(--text-muted);
+        }
+
+        .add-widget-card:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .add-widget-card svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        /* Widget Type Selection */
+        .widget-type-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .widget-type-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .widget-type-btn:hover {
+            border-color: var(--accent);
+            background: var(--bg-hover);
+        }
+
+        .widget-type-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .widget-type-name {
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        /* Emoji Picker */
+        .emoji-picker {
+            position: absolute;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .emoji-picker.active {
+            display: block;
+        }
+
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 5px;
+        }
+
+        .emoji-btn {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .emoji-btn:hover {
+            background: var(--bg-hover);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .widget.large {
+                grid-column: span 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main {
+                margin-left: 0;
+            }
+
+            .menu-toggle {
+                display: block;
+            }
+
+            .page-content {
+                padding: 15px;
+            }
+
+            .widget-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .clock-box {
+                font-size: 2rem;
+                padding: 10px 15px;
+                min-width: 70px;
+            }
+
+            .page-title {
+                font-size: 1.8rem;
+            }
+
+            .topbar-btn span {
+                display: none;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .widget {
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 15px 25px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1001;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-color: var(--success);
+        }
+
+        .toast.success::before {
+            content: '✓';
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        /* Weather refresh */
+        .weather-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .weather-refresh {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+
+        .weather-refresh:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <div class="sidebar-logo-icon">🌿</div>
+                <span>Life OS</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Asosiy</div>
+                <div class="nav-item active" data-filter="dashboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    Dashboard
+                </div>
+                <div class="nav-item" data-filter="countdown">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Kalendar
+                </div>
+                <div class="nav-item" data-filter="todo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                    Vazifalar
+                </div>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Shaxsiy</div>
+                <div class="nav-item" data-filter="goals">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                    Maqsadlar
+                </div>
+                <div class="nav-item" data-filter="notes">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    Eslatmalar
+                </div>
+                <div class="nav-item" data-filter="habits">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                        <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                        <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                    </svg>
+                    Odatlar
+                </div>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="theme-toggle">
+                <span>🌙 Dark Mode</span>
+                <span>On</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Top Bar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="breadcrumb">
+                    🏠 <span>Dashboard</span>
+                </div>
+            </div>
+            <div class="topbar-actions">
+                <button class="topbar-btn" onclick="resetDashboard()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="1 4 1 10 7 10"></polyline>
+                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                    </svg>
+                    <span>Tiklash</span>
+                </button>
+                <button class="topbar-btn primary" onclick="openWidgetModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Widget qo'shish</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="page-content">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div class="page-cover" onclick="changeCover()">
+                    <img id="coverImage" src="" alt="Cover">
+                    <div class="page-cover-overlay">
+                        <button class="page-cover-btn">📷 Rasmni o'zgartirish</button>
+                    </div>
+                </div>
+                <div class="page-title-section">
+                    <div class="page-icon" id="pageIcon" onclick="openEmojiPicker(event, this, 'pageIcon')">🌿</div>
+                    <div style="flex: 1;">
+                        <div class="page-title" contenteditable="true" id="pageTitle">Personal Life Dashboard</div>
+                        <div class="page-description" contenteditable="true" id="pageDescription">Kundalik hayotingizni tartibga soling va maqsadlaringizga erishing</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Widget Grid -->
+            <div class="widget-grid" id="widgetGrid">
+                <!-- Widgets will be rendered here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Widget Modal -->
+    <div class="modal-overlay" id="widgetModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Widget qo'shish</h3>
+                <button class="modal-close" onclick="closeWidgetModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="widget-type-grid">
+                    <button class="widget-type-btn" onclick="addWidget('clock')">
+                        <div class="widget-type-icon">🕐</div>
+                        <div class="widget-type-name">Soat</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('todo')">
+                        <div class="widget-type-icon">✅</div>
+                        <div class="widget-type-name">Vazifalar</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('notes')">
+                        <div class="widget-type-icon">📝</div>
+                        <div class="widget-type-name">Eslatmalar</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('goals')">
+                        <div class="widget-type-icon">🎯</div>
+                        <div class="widget-type-name">Maqsadlar</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('habits')">
+                        <div class="widget-type-icon">💪</div>
+                        <div class="widget-type-name">Odatlar</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('progress')">
+                        <div class="widget-type-icon">📊</div>
+                        <div class="widget-type-name">Progress</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('weekly')">
+                        <div class="widget-type-icon">📆</div>
+                        <div class="widget-type-name">Haftalik natijalar</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('monthly')">
+                        <div class="widget-type-icon">🗓️</div>
+                        <div class="widget-type-name">Oylik natijalar</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('quote')">
+                        <div class="widget-type-icon">💭</div>
+                        <div class="widget-type-name">Iqtibos</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('image')">
+                        <div class="widget-type-icon">🖼️</div>
+                        <div class="widget-type-name">Rasm</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('weather')">
+                        <div class="widget-type-icon">☀️</div>
+                        <div class="widget-type-name">Ob-havo</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('countdown')">
+                        <div class="widget-type-icon">⏳</div>
+                        <div class="widget-type-name">Countdown</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emoji Picker -->
+    <div class="emoji-picker" id="emojiPicker">
+        <div class="emoji-grid" id="emojiGrid"></div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Hidden File Input -->
+    <input type="file" id="imageInput" accept="image/*" style="display: none;">
+    <input type="file" id="coverInput" accept="image/*" style="display: none;">
+
+    <script>
+        // Data Store
+        const SUPABASE_TABLE = 'dashboard_states';
+        const SUPABASE_ID = 'default';
+        const supabaseUrl = ''; // Supabase project URL: https://xxxx.supabase.co
+        const supabaseKey = ''; // Supabase anon/public API key
+        const supabaseEnabled = Boolean(supabaseUrl && supabaseKey);
+        const supabaseClient = supabaseEnabled ? supabase.createClient(supabaseUrl, supabaseKey) : null;
+        let dashboardData = {
+            pageIcon: '🌿',
+            pageTitle: 'Personal Life Dashboard',
+            pageDescription: 'Kundalik hayotingizni tartibga soling va maqsadlaringizga erishing',
+            coverImage: 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=1200&h=400&fit=crop',
+            widgets: []
+        };
+        let activeFilter = 'dashboard';
+
+        // Default Widgets
+        const defaultWidgets = [
+            {
+                id: 'w1',
+                type: 'clock',
+                title: 'Vaqt',
+                icon: '🕐'
+            },
+            {
+                id: 'w2',
+                type: 'todo',
+                title: 'Kunlik Vazifalar',
+                icon: '✅',
+                data: {
+                    items: [
+                        { id: 't1', text: 'Ertalabki mashq', completed: true, time: '06:30', createdAt: '2025-01-01', completedAt: '2025-01-01' },
+                        { id: 't2', text: 'Nonushta tayyorlash', completed: true, time: '07:00', createdAt: '2025-01-01', completedAt: '2025-01-01' },
+                        { id: 't3', text: 'Kitob o\'qish (30 daqiqa)', completed: true, time: '08:00', createdAt: '2025-01-01', completedAt: '2025-01-02' },
+                        { id: 't4', text: 'Do\'stlar bilan uchrashish', completed: false, time: '14:00', createdAt: '2025-01-02', completedAt: null },
+                        { id: 't5', text: 'Oila bilan kechki ovqat', completed: false, time: '19:00', createdAt: '2025-01-02', completedAt: null }
+                    ]
+                }
+            },
+            {
+                id: 'w3',
+                type: 'goals',
+                title: 'Maqsadlarim',
+                icon: '🎯',
+                data: {
+                    items: [
+                        { id: 'g1', icon: '📖', name: '12 ta kitob o\'qish', progress: 58 },
+                        { id: 'g2', icon: '🏃', name: 'Marafon yugurish', progress: 30 },
+                        { id: 'g3', icon: '🌍', name: '3 ta yangi mamlakat', progress: 33 }
+                    ]
+                }
+            },
+            {
+                id: 'w4',
+                type: 'habits',
+                title: 'Odatlar',
+                icon: '💪',
+                data: {
+                    items: [
+                        { id: 'h1', emoji: '💧', name: 'Suv ichish', days: [true, true, true, true, true, false, false] },
+                        { id: 'h2', emoji: '🧘', name: 'Meditatsiya', days: [true, true, false, true, true, false, false] },
+                        { id: 'h3', emoji: '📝', name: 'Kundalik yozish', days: [true, true, true, true, true, false, false] }
+                    ]
+                }
+            },
+            {
+                id: 'w5',
+                type: 'quote',
+                title: 'Ilhom',
+                icon: '💭',
+                large: true,
+                data: {
+                    text: 'Kelajakni bashorat qilishning eng yaxshi yo\'li - uni o\'zingiz yaratishdir.',
+                    author: 'Abraham Lincoln'
+                }
+            },
+            {
+                id: 'w6',
+                type: 'notes',
+                title: 'Eslatmalar',
+                icon: '📝',
+                data: {
+                    content: '• Ota-onaga qo\'ng\'iroq qilish\n• Vitaminlarni sotib olish\n• Do\'stning tug\'ilgan kuni - 15-yanvar'
+                }
+            }
+        ];
+
+        // Emojis
+        const emojis = ['🌿', '🎯', '💪', '📚', '🎨', '🎵', '🏃', '🧘', '💡', '🚀', '⭐', '🌟', '💎', '🔥', '❤️', '💜', '💙', '💚', '🧡', '💛', '🌈', '☀️', '🌙', '⚡', '🎮', '📱', '💻', '🎬', '📷', '✈️', '🏠', '🌺', '🌸', '🍀', '🌴', '🌊', '⛰️', '🎪', '🎭', '🎨'];
+
+        // Initialize
+        async function init() {
+            await loadData();
+            setupNavFilters();
+            renderDashboard();
+            startClock();
+            setupEventListeners();
+        }
+
+        // Load Data
+        async function loadData() {
+            if (supabaseClient) {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from(SUPABASE_TABLE)
+                        .select('data')
+                        .eq('id', SUPABASE_ID)
+                        .single();
+
+                    if (error && error.code !== 'PGRST116') {
+                        console.warn('Supabase load error', error);
+                    }
+
+                    if (data && data.data) {
+                        dashboardData = data.data;
+                        return;
+                    }
+                } catch (err) {
+                    console.warn('Supabase load exception', err);
+                }
+            }
+
+            const saved = localStorage.getItem('lifeos_dashboard');
+            if (saved) {
+                dashboardData = JSON.parse(saved);
+            } else {
+                dashboardData.widgets = [...defaultWidgets];
+            }
+        }
+
+        // Save Data
+        async function saveData() {
+            if (supabaseClient) {
+                try {
+                    const { error } = await supabaseClient
+                        .from(SUPABASE_TABLE)
+                        .upsert({ id: SUPABASE_ID, data: dashboardData });
+                    if (error) {
+                        console.warn('Supabase save error', error);
+                        localStorage.setItem('lifeos_dashboard', JSON.stringify(dashboardData));
+                    }
+                } catch (err) {
+                    console.warn('Supabase save exception', err);
+                    localStorage.setItem('lifeos_dashboard', JSON.stringify(dashboardData));
+                }
+            } else {
+                localStorage.setItem('lifeos_dashboard', JSON.stringify(dashboardData));
+            }
+            showToast('Saqlandi!');
+        }
+
+        // Render Dashboard
+        function renderDashboard() {
+            // Page header
+            document.getElementById('pageIcon').textContent = dashboardData.pageIcon;
+            document.getElementById('pageTitle').textContent = dashboardData.pageTitle;
+            document.getElementById('pageDescription').textContent = dashboardData.pageDescription;
+            document.getElementById('coverImage').src = dashboardData.coverImage;
+
+            // Widgets
+            const grid = document.getElementById('widgetGrid');
+            grid.innerHTML = '';
+            let visibleCount = 0;
+
+            dashboardData.widgets.forEach((widget, index) => {
+                const el = createWidgetElement(widget, index);
+                if (activeFilter !== 'dashboard' && widget.type !== activeFilter) {
+                    el.classList.add('hidden-filter');
+                } else {
+                    visibleCount++;
+                }
+                grid.appendChild(el);
+            });
+
+            if (activeFilter !== 'dashboard' && visibleCount === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.textContent = 'Bu bo\'lim uchun widget yo\'q. + tugmasi bilan qo\'shing.';
+                grid.appendChild(empty);
+            }
+
+            // Add widget card
+            const addCard = document.createElement('div');
+            addCard.className = 'add-widget-card';
+            addCard.onclick = openWidgetModal;
+            addCard.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Widget qo'shish</span>
+            `;
+            grid.appendChild(addCard);
+
+            requestAnimationFrame(() => {
+                renderCharts();
+                refreshWeatherWidgets();
+            });
+        }
+
+        // Create Widget Element
+        function createWidgetElement(widget, index) {
+            const div = document.createElement('div');
+            div.className = `widget ${widget.large ? 'large' : ''}`;
+            div.draggable = true;
+            div.dataset.index = index;
+
+            div.innerHTML = `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <span class="widget-title-icon" onclick="openEmojiPicker(event, this, 'widget', ${index})">${widget.icon}</span>
+                        <input type="text" value="${widget.title}" onchange="updateWidgetTitle(${index}, this.value)">
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-action-btn" onclick="toggleWidgetSize(${index})" title="O'lchamni o'zgartirish">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <polyline points="9 21 3 21 3 15"></polyline>
+                            </svg>
+                        </button>
+                        <button class="widget-action-btn danger" onclick="deleteWidget(${index})" title="O'chirish">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-body">
+                    ${getWidgetContent(widget, index)}
+                </div>
+            `;
+
+            // Drag events
+            div.addEventListener('dragstart', handleDragStart);
+            div.addEventListener('dragend', handleDragEnd);
+            div.addEventListener('dragover', handleDragOver);
+            div.addEventListener('drop', handleDrop);
+
+            return div;
+        }
+
+        // Get Widget Content
+        function getWidgetContent(widget, index) {
+            switch(widget.type) {
+                case 'clock':
+                    return `
+                        <div class="clock-display">
+                            <div>
+                                <div class="clock-box" id="hours-${index}">00</div>
+                                <div class="clock-label">Soat</div>
+                            </div>
+                            <div>
+                                <div class="clock-box" id="minutes-${index}">00</div>
+                                <div class="clock-label">Daqiqa</div>
+                            </div>
+                        </div>
+                        <div class="date-display" id="date-${index}"></div>
+                    `;
+
+                case 'todo':
+                    const todoItems = widget.data?.items || [];
+                    return `
+                        <div class="todo-input-wrapper">
+                            <input type="text" class="todo-input" placeholder="Yangi vazifa..." onkeypress="if(event.key==='Enter')addTodoItem(${index}, this)">
+                            <button class="todo-add-btn" onclick="addTodoItem(${index}, this.previousElementSibling)">+</button>
+                        </div>
+                        <div class="todo-list" id="todoList-${index}">
+                            ${todoItems.map((item, i) => `
+                                <div class="todo-item ${item.completed ? 'completed' : ''}" onclick="toggleTodo(${index}, ${i})">
+                                    <div class="todo-checkbox"></div>
+                                    <div class="todo-text">
+                                        <input type="text" value="${item.text}" onclick="event.stopPropagation()" onchange="updateTodoText(${index}, ${i}, this.value)">
+                                    </div>
+                                    <div class="todo-time">
+                                        <input type="time" value="${item.time || ''}" onclick="event.stopPropagation()" onchange="updateTodoTime(${index}, ${i}, this.value)">
+                                    </div>
+                                    <button class="todo-delete" onclick="event.stopPropagation(); deleteTodo(${index}, ${i})">✕</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+
+                case 'notes':
+                    return `
+                        <textarea class="note-textarea" placeholder="Eslatmalaringizni yozing..." onchange="updateNotes(${index}, this.value)">${widget.data?.content || ''}</textarea>
+                    `;
+
+                case 'goals':
+                    const goals = widget.data?.items || [];
+                    return `
+                        <div id="goalsList-${index}">
+                            ${goals.map((goal, i) => `
+                                <div class="goal-item">
+                                    <div class="goal-icon" onclick="openEmojiPicker(event, this, 'goal', ${index}, ${i})">${goal.icon}</div>
+                                    <div class="goal-info">
+                                        <input class="goal-name" type="text" value="${goal.name}" onchange="updateGoalName(${index}, ${i}, this.value)">
+                                        <div class="goal-progress-bar" onclick="updateGoalProgress(${index}, ${i}, event)">
+                                            <div class="goal-progress-fill" style="width: ${goal.progress}%"></div>
+                                        </div>
+                                        <div class="goal-progress-text">${goal.progress}% bajarildi</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button style="width:100%; margin-top:10px; padding:10px; background:var(--bg-tertiary); border:1px dashed var(--border); border-radius:8px; color:var(--text-muted); cursor:pointer;" onclick="addGoal(${index})">+ Maqsad qo'shish</button>
+                    `;
+
+                case 'habits':
+                    const habits = widget.data?.items || [];
+                    const dayNames = ['D', 'S', 'C', 'P', 'J', 'S', 'Y'];
+                    return `
+                        <div id="habitsList-${index}">
+                            ${habits.map((habit, i) => `
+                                <div class="habit-item">
+                                    <div class="habit-name">
+                                        <span class="habit-emoji" onclick="openEmojiPicker(event, this, 'habit', ${index}, ${i})">${habit.emoji}</span>
+                                        <input type="text" value="${habit.name}" onchange="updateHabitName(${index}, ${i}, this.value)">
+                                    </div>
+                                    <div class="habit-days">
+                                        ${habit.days.map((done, d) => `
+                                            <div class="habit-day ${done ? 'done' : ''}" onclick="toggleHabitDay(${index}, ${i}, ${d})">${dayNames[d]}</div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button style="width:100%; margin-top:10px; padding:10px; background:var(--bg-tertiary); border:1px dashed var(--border); border-radius:8px; color:var(--text-muted); cursor:pointer;" onclick="addHabit(${index})">+ Odat qo'shish</button>
+                    `;
+
+                case 'quote':
+                    return `
+                        <textarea class="quote-text" placeholder="Iqtibos..." onchange="updateQuote(${index}, 'text', this.value)">${widget.data?.text || ''}</textarea>
+                        <div class="quote-author">
+                            — <input type="text" value="${widget.data?.author || ''}" placeholder="Muallif" onchange="updateQuote(${index}, 'author', this.value)">
+                        </div>
+                    `;
+
+                case 'image':
+                    return `
+                        <div class="image-widget-content" onclick="selectImage(${index})">
+                            ${widget.data?.src ?
+                                `<img src="${widget.data.src}" alt="Widget image">` :
+                                `<div class="image-placeholder">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                        <polyline points="21 15 16 10 5 21"></polyline>
+                                    </svg>
+                                    <span>Rasm tanlash</span>
+                                </div>`
+                            }
+                        </div>
+                    `;
+
+                case 'weather':
+                    return `
+                        <div class="weather-actions">
+                            <div>Ob-havo</div>
+                            <button class="weather-refresh" onclick="event.stopPropagation(); refreshWeather(${index})">Yangilash</button>
+                        </div>
+                        <div class="weather-location">
+                            📍 <input type="text" value="${widget.data?.location || 'Farg\'ona, O\'zbekiston'}" onchange="updateWeatherLocation(${index}, this.value)">
+                        </div>
+                        <div class="weather-main">
+                            <div class="weather-icon" id="weather-icon-${index}">☀️</div>
+                            <div>
+                                <div class="weather-temp" id="weather-temp-${index}">--°C</div>
+                                <div class="weather-desc" id="weather-desc-${index}">Yuklanmoqda...</div>
+                            </div>
+                        </div>
+                    `;
+
+                case 'progress':
+                    const progressItems = widget.data?.items || [
+                        { label: '📚 Kitob o\'qish', value: 70 },
+                        { label: '🏃 Sport', value: 45 },
+                        { label: '💰 Jamg\'arma', value: 80 }
+                    ];
+                    return `
+                        <div id="progressList-${index}">
+                            ${progressItems.map((item, i) => `
+                                <div class="progress-item">
+                                    <div class="progress-header">
+                                        <span class="progress-label">
+                                            <input type="text" value="${item.label}" onchange="updateProgressLabel(${index}, ${i}, this.value)">
+                                        </span>
+                                        <span class="progress-value">${item.value}%</span>
+                                    </div>
+                                    <div class="progress-bar" onclick="updateProgressValue(${index}, ${i}, event)">
+                                        <div class="progress-fill" style="width: ${item.value}%"></div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button style="width:100%; margin-top:10px; padding:10px; background:var(--bg-tertiary); border:1px dashed var(--border); border-radius:8px; color:var(--text-muted); cursor:pointer;" onclick="addProgressItem(${index})">+ Progress qo'shish</button>
+                    `;
+
+                case 'weekly': {
+                    const metrics = computeMetrics();
+                    return `
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-label">Hafta vazifalari</div>
+                                <div class="stat-value">${metrics.weeklyTodos}/${metrics.weeklyTotal}</div>
+                                <div class="stat-sub">${metrics.weeklyRate}% bajarildi</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Odatlar bajarilishi</div>
+                                <div class="stat-value">${metrics.habitRate}%</div>
+                                <div class="stat-sub">${metrics.habitDone}/${metrics.habitTotal} kun</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">O'rtacha maqsad</div>
+                                <div class="stat-value">${metrics.goalsAvg}%</div>
+                                <div class="stat-sub">Maqsadlar kesimida</div>
+                            </div>
+                        </div>
+                        <canvas id="chart-weekly-${index}" height="180"></canvas>
+                    `;
+                }
+
+                case 'monthly': {
+                    const metrics = computeMetrics();
+                    return `
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-label">Progress o'rtacha</div>
+                                <div class="stat-value">${metrics.progressAvg}%</div>
+                                <div class="stat-sub">Progress items</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Maqsadlar o'rtacha</div>
+                                <div class="stat-value">${metrics.goalsAvg}%</div>
+                                <div class="stat-sub">Barcha maqsadlar</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">30 kun vazifalar</div>
+                                <div class="stat-value">${metrics.monthlyRate}%</div>
+                                <div class="stat-sub">${metrics.monthlyTodos}/${metrics.monthlyTotal}</div>
+                            </div>
+                        </div>
+                        <canvas id="chart-monthly-${index}" height="180"></canvas>
+                    `;
+                }
+
+                case 'countdown':
+                    return `
+                        <div style="text-align:center;">
+                            <input type="text" value="${widget.data?.event || 'Muhim sana'}" style="background:transparent; border:none; color:var(--text-secondary); text-align:center; font-size:0.9rem; outline:none; width:100%; margin-bottom:15px;" onchange="updateCountdownEvent(${index}, this.value)">
+                            <input type="date" value="${widget.data?.date || ''}" style="background:var(--bg-tertiary); border:1px solid var(--border); color:var(--text-primary); padding:10px; border-radius:8px; font-family:inherit; margin-bottom:15px;" onchange="updateCountdownDate(${index}, this.value)">
+                            <div style="font-size:2rem; font-weight:700; color:var(--accent);" id="countdown-${index}">0 kun</div>
+                        </div>
+                    `;
+
+                default:
+                    return '<p>Widget</p>';
+            }
+        }
+
+        // Clock
+        function startClock() {
+            function update() {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+
+                dashboardData.widgets.forEach((widget, index) => {
+                    if (widget.type === 'clock') {
+                        const hoursEl = document.getElementById(`hours-${index}`);
+                        const minutesEl = document.getElementById(`minutes-${index}`);
+                        const dateEl = document.getElementById(`date-${index}`);
+
+                        if (hoursEl) hoursEl.textContent = hours;
+                        if (minutesEl) minutesEl.textContent = minutes;
+                        if (dateEl) {
+                            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                            dateEl.textContent = now.toLocaleDateString('uz-UZ', options);
+                        }
+                    }
+
+                    if (widget.type === 'countdown' && widget.data?.date) {
+                        const countdownEl = document.getElementById(`countdown-${index}`);
+                        if (countdownEl) {
+                            const target = new Date(widget.data.date);
+                            const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+                            countdownEl.textContent = diff > 0 ? `${diff} kun qoldi` : diff === 0 ? 'Bugun!' : 'O\'tdi';
+                        }
+                    }
+                });
+            }
+            update();
+            setInterval(update, 1000);
+        }
+
+        // Widget Actions
+        function updateWidgetTitle(index, value) {
+            dashboardData.widgets[index].title = value;
+            saveData();
+        }
+
+        function toggleWidgetSize(index) {
+            dashboardData.widgets[index].large = !dashboardData.widgets[index].large;
+            saveData();
+            renderDashboard();
+        }
+
+        function deleteWidget(index) {
+            if (confirm('Widgetni o\'chirishni xohlaysizmi?')) {
+                dashboardData.widgets.splice(index, 1);
+                saveData();
+                renderDashboard();
+            }
+        }
+
+        // Todo Actions
+        function addTodoItem(widgetIndex, input) {
+            if (!input.value.trim()) return;
+
+            if (!dashboardData.widgets[widgetIndex].data) {
+                dashboardData.widgets[widgetIndex].data = { items: [] };
+            }
+
+            dashboardData.widgets[widgetIndex].data.items.push({
+                id: 't' + Date.now(),
+                text: input.value.trim(),
+                completed: false,
+                time: '',
+                createdAt: new Date().toISOString(),
+                completedAt: null
+            });
+
+            input.value = '';
+            saveData();
+            renderDashboard();
+        }
+
+        function toggleTodo(widgetIndex, itemIndex) {
+            const item = dashboardData.widgets[widgetIndex].data.items[itemIndex];
+            item.completed = !item.completed;
+            if (item.completed) {
+                item.completedAt = new Date().toISOString();
+            } else {
+                item.completedAt = null;
+            }
+            saveData();
+            renderDashboard();
+        }
+
+        function updateTodoText(widgetIndex, itemIndex, value) {
+            dashboardData.widgets[widgetIndex].data.items[itemIndex].text = value;
+            saveData();
+        }
+
+        function updateTodoTime(widgetIndex, itemIndex, value) {
+            dashboardData.widgets[widgetIndex].data.items[itemIndex].time = value;
+            saveData();
+        }
+
+        function deleteTodo(widgetIndex, itemIndex) {
+            dashboardData.widgets[widgetIndex].data.items.splice(itemIndex, 1);
+            saveData();
+            renderDashboard();
+        }
+
+        // Notes Actions
+        function updateNotes(index, value) {
+            if (!dashboardData.widgets[index].data) {
+                dashboardData.widgets[index].data = {};
+            }
+            dashboardData.widgets[index].data.content = value;
+            saveData();
+        }
+
+        // Goals Actions
+        function addGoal(index) {
+            if (!dashboardData.widgets[index].data) {
+                dashboardData.widgets[index].data = { items: [] };
+            }
+            dashboardData.widgets[index].data.items.push({
+                id: 'g' + Date.now(),
+                icon: '🎯',
+                name: 'Yangi maqsad',
+                progress: 0
+            });
+            saveData();
+            renderDashboard();
+        }
+
+        function updateGoalName(widgetIndex, goalIndex, value) {
+            dashboardData.widgets[widgetIndex].data.items[goalIndex].name = value;
+            saveData();
+        }
+
+        function updateGoalProgress(widgetIndex, goalIndex, event) {
+            const rect = event.target.getBoundingClientRect();
+            const progress = Math.round(((event.clientX - rect.left) / rect.width) * 100);
+            dashboardData.widgets[widgetIndex].data.items[goalIndex].progress = Math.max(0, Math.min(100, progress));
+            saveData();
+            renderDashboard();
+        }
+
+        // Habits Actions
+        function addHabit(index) {
+            if (!dashboardData.widgets[index].data) {
+                dashboardData.widgets[index].data = { items: [] };
+            }
+            dashboardData.widgets[index].data.items.push({
+                id: 'h' + Date.now(),
+                emoji: '✨',
+                name: 'Yangi odat',
+                days: [false, false, false, false, false, false, false]
+            });
+            saveData();
+            renderDashboard();
+        }
+
+        function updateHabitName(widgetIndex, habitIndex, value) {
+            dashboardData.widgets[widgetIndex].data.items[habitIndex].name = value;
+            saveData();
+        }
+
+        function toggleHabitDay(widgetIndex, habitIndex, dayIndex) {
+            dashboardData.widgets[widgetIndex].data.items[habitIndex].days[dayIndex] =
+                !dashboardData.widgets[widgetIndex].data.items[habitIndex].days[dayIndex];
+            saveData();
+            renderDashboard();
+        }
+
+        // Quote Actions
+        function updateQuote(index, field, value) {
+            if (!dashboardData.widgets[index].data) {
+                dashboardData.widgets[index].data = {};
+            }
+            dashboardData.widgets[index].data[field] = value;
+            saveData();
+        }
+
+        // Progress Actions
+        function addProgressItem(index) {
+            if (!dashboardData.widgets[index].data) {
+                dashboardData.widgets[index].data = { items: [] };
+            }
+            dashboardData.widgets[index].data.items.push({
+                label: '📈 Yangi',
+                value: 0
+            });
+            saveData();
+            renderDashboard();
+        }
+
+        function updateProgressLabel(widgetIndex, itemIndex, value) {
+            dashboardData.widgets[widgetIndex].data.items[itemIndex].label = value;
+            saveData();
+        }
+
+        function updateProgressValue(widgetIndex, itemIndex, event) {
+            const rect = event.target.getBoundingClientRect();
+            const value = Math.round(((event.clientX - rect.left) / rect.width) * 100);
+            dashboardData.widgets[widgetIndex].data.items[itemIndex].value = Math.max(0, Math.min(100, value));
+            saveData();
+            renderDashboard();
+        }
+
+        // Weather Actions
+        function updateWeatherLocation(index, value) {
+            if (!dashboardData.widgets[index].data) {
+                dashboardData.widgets[index].data = {};
+            }
+            dashboardData.widgets[index].data.location = value;
+            saveData();
+            refreshWeather(index);
+        }
+
+        // Countdown Actions
+        function updateCountdownEvent(index, value) {
+            if (!dashboardData.widgets[index].data) {
+                dashboardData.widgets[index].data = {};
+            }
+            dashboardData.widgets[index].data.event = value;
+            saveData();
+        }
+
+        function updateCountdownDate(index, value) {
+            if (!dashboardData.widgets[index].data) {
+                dashboardData.widgets[index].data = {};
+            }
+            dashboardData.widgets[index].data.date = value;
+            saveData();
+        }
+
+        // Image Actions
+        let currentImageWidgetIndex = null;
+
+        function selectImage(index) {
+            currentImageWidgetIndex = index;
+            document.getElementById('imageInput').click();
+        }
+
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && currentImageWidgetIndex !== null) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    if (!dashboardData.widgets[currentImageWidgetIndex].data) {
+                        dashboardData.widgets[currentImageWidgetIndex].data = {};
+                    }
+                    dashboardData.widgets[currentImageWidgetIndex].data.src = event.target.result;
+                    saveData();
+                    renderDashboard();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Cover Image
+        function changeCover() {
+            document.getElementById('coverInput').click();
+        }
+
+        document.getElementById('coverInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    dashboardData.coverImage = event.target.result;
+                    saveData();
+                    renderDashboard();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Emoji Picker
+        let emojiPickerTarget = null;
+        let emojiPickerWidgetIndex = null;
+        let emojiPickerItemIndex = null;
+
+        function openEmojiPicker(evt, element, type, widgetIndex, itemIndex) {
+            const picker = document.getElementById('emojiPicker');
+            const grid = document.getElementById('emojiGrid');
+
+            emojiPickerTarget = { element, type };
+            emojiPickerWidgetIndex = widgetIndex;
+            emojiPickerItemIndex = itemIndex;
+
+            grid.innerHTML = emojis.map(emoji =>
+                `<button class="emoji-btn" onclick="selectEmoji('${emoji}')">${emoji}</button>`
+            ).join('');
+
+            const rect = element.getBoundingClientRect();
+            picker.style.left = rect.left + 'px';
+            picker.style.top = (rect.bottom + 5) + 'px';
+            picker.classList.add('active');
+
+            evt.stopPropagation();
+        }
+
+        function selectEmoji(emoji) {
+            if (emojiPickerTarget.type === 'pageIcon') {
+                dashboardData.pageIcon = emoji;
+                document.getElementById('pageIcon').textContent = emoji;
+            } else if (emojiPickerTarget.type === 'widget') {
+                dashboardData.widgets[emojiPickerWidgetIndex].icon = emoji;
+            } else if (emojiPickerTarget.type === 'goal') {
+                dashboardData.widgets[emojiPickerWidgetIndex].data.items[emojiPickerItemIndex].icon = emoji;
+            } else if (emojiPickerTarget.type === 'habit') {
+                dashboardData.widgets[emojiPickerWidgetIndex].data.items[emojiPickerItemIndex].emoji = emoji;
+            }
+
+            saveData();
+            renderDashboard();
+            closeEmojiPicker();
+        }
+
+        function closeEmojiPicker() {
+            document.getElementById('emojiPicker').classList.remove('active');
+        }
+
+        // Modal
+        function openWidgetModal() {
+            document.getElementById('widgetModal').classList.add('active');
+        }
+
+        function closeWidgetModal() {
+            document.getElementById('widgetModal').classList.remove('active');
+        }
+
+        function addWidget(type) {
+            const widgetTypes = {
+                clock: { title: 'Soat', icon: '🕐' },
+                todo: { title: 'Vazifalar', icon: '✅', data: { items: [] } },
+                notes: { title: 'Eslatmalar', icon: '📝', data: { content: '' } },
+                goals: { title: 'Maqsadlar', icon: '🎯', data: { items: [] } },
+                habits: { title: 'Odatlar', icon: '💪', data: { items: [] } },
+                progress: { title: 'Progress', icon: '📊', data: { items: [] } },
+            weekly: { title: 'Haftalik natijalar', icon: '📆', data: {} },
+            monthly: { title: 'Oylik natijalar', icon: '🗓️', data: {} },
+                quote: { title: 'Iqtibos', icon: '💭', data: { text: '', author: '' } },
+                image: { title: 'Rasm', icon: '🖼️', data: { src: '' } },
+                weather: { title: 'Ob-havo', icon: '☀️', data: { location: 'Farg\'ona' } },
+                countdown: { title: 'Countdown', icon: '⏳', data: { event: '', date: '' } }
+            };
+
+            const config = widgetTypes[type];
+            dashboardData.widgets.push({
+                id: 'w' + Date.now(),
+                type: type,
+                ...config
+            });
+
+            saveData();
+            renderDashboard();
+            closeWidgetModal();
+        }
+
+        // Drag & Drop
+        let draggedWidget = null;
+
+        function handleDragStart(e) {
+            draggedWidget = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.widget').forEach(w => w.classList.remove('drag-over'));
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            if (draggedWidget !== this) {
+                const fromIndex = parseInt(draggedWidget.dataset.index);
+                const toIndex = parseInt(this.dataset.index);
+
+                const temp = dashboardData.widgets[fromIndex];
+                dashboardData.widgets.splice(fromIndex, 1);
+                dashboardData.widgets.splice(toIndex, 0, temp);
+
+                saveData();
+                renderDashboard();
+            }
+        }
+
+        // Page Header Updates
+        function setupEventListeners() {
+            document.getElementById('pageTitle').addEventListener('blur', function() {
+                dashboardData.pageTitle = this.textContent;
+                saveData();
+            });
+
+            document.getElementById('pageDescription').addEventListener('blur', function() {
+                dashboardData.pageDescription = this.textContent;
+                saveData();
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.emoji-picker') && !e.target.closest('.page-icon') && !e.target.closest('.widget-title-icon') && !e.target.closest('.goal-icon') && !e.target.closest('.habit-emoji')) {
+                    closeEmojiPicker();
+                }
+            });
+
+            document.getElementById('widgetModal').addEventListener('click', function(e) {
+                if (e.target === this) closeWidgetModal();
+            });
+        }
+
+        function setupNavFilters() {
+            const items = document.querySelectorAll('.nav-item[data-filter]');
+            items.forEach(item => {
+                item.addEventListener('click', () => {
+                    setNavFilter(item.dataset.filter, item);
+                });
+            });
+            const dashboardItem = document.querySelector('.nav-item[data-filter="dashboard"]');
+            if (dashboardItem) setNavFilter('dashboard', dashboardItem);
+        }
+
+        function setNavFilter(filter, el) {
+            activeFilter = filter;
+            document.querySelectorAll('.nav-item[data-filter]').forEach(item => {
+                item.classList.toggle('active', item === el);
+            });
+            const breadcrumb = document.querySelector('.breadcrumb span');
+            if (breadcrumb) {
+                breadcrumb.textContent = (el?.textContent || 'Dashboard').trim();
+            }
+            renderDashboard();
+        }
+
+        // Reset
+        function resetDashboard() {
+            if (confirm('Dashboardni boshlang\'ich holatga qaytarishni xohlaysizmi?')) {
+                localStorage.removeItem('lifeos_dashboard');
+                dashboardData.widgets = [...defaultWidgets];
+                dashboardData.pageIcon = '🌿';
+                dashboardData.pageTitle = 'Personal Life Dashboard';
+                dashboardData.pageDescription = 'Kundalik hayotingizni tartibga soling va maqsadlaringizga erishing';
+                dashboardData.coverImage = 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=1200&h=400&fit=crop';
+                saveData();
+                renderDashboard();
+            }
+        }
+
+        // Sidebar Toggle
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        // Metrics helpers
+        function computeMetrics() {
+            const now = new Date();
+            const daysAgo = (dateStr) => {
+                if (!dateStr) return Infinity;
+                const d = new Date(dateStr);
+                return (now - d) / (1000 * 60 * 60 * 24);
+            };
+
+            const todos = dashboardData.widgets.find(w => w.type === 'todo')?.data?.items || [];
+            const completedTodos = todos.filter(t => t.completed).length;
+            const totalTodos = todos.length || 1;
+            const todoRate = Math.round((completedTodos / totalTodos) * 100);
+
+            const weeklyTodos = todos.filter(t => daysAgo(t.completedAt) <= 7);
+            const weeklyTotal = todos.filter(t => daysAgo(t.createdAt || t.completedAt) <= 7).length || 1;
+            const weeklyRate = Math.round((weeklyTodos.length / weeklyTotal) * 100);
+
+            const monthlyTodos = todos.filter(t => daysAgo(t.completedAt) <= 30);
+            const monthlyTotal = todos.filter(t => daysAgo(t.createdAt || t.completedAt) <= 30).length || 1;
+            const monthlyRate = Math.round((monthlyTodos.length / monthlyTotal) * 100);
+
+            const habits = dashboardData.widgets.find(w => w.type === 'habits')?.data?.items || [];
+            const habitDone = habits.reduce((sum, h) => sum + (h.days || []).filter(Boolean).length, 0);
+            const habitTotal = habits.length * 7 || 1;
+            const habitRate = Math.round((habitDone / habitTotal) * 100);
+
+            const goals = dashboardData.widgets.find(w => w.type === 'goals')?.data?.items || [];
+            const goalsAvg = goals.length ? Math.round(goals.reduce((s, g) => s + (g.progress || 0), 0) / goals.length) : 0;
+
+            const progressItems = dashboardData.widgets.find(w => w.type === 'progress')?.data?.items || [];
+            const progressAvg = progressItems.length ? Math.round(progressItems.reduce((s, p) => s + (p.value || 0), 0) / progressItems.length) : 0;
+
+            return {
+                completedTodos,
+                totalTodos,
+                todoRate,
+                weeklyTodos: weeklyTodos.length,
+                weeklyTotal,
+                weeklyRate,
+                monthlyTodos: monthlyTodos.length,
+                monthlyTotal,
+                monthlyRate,
+                habits,
+                habitDone,
+                habitTotal,
+                habitRate,
+                goalsAvg,
+                progressAvg
+            };
+        }
+
+        const chartInstances = {};
+
+        function renderCharts() {
+            if (!window.Chart) return;
+            const metrics = computeMetrics();
+
+            dashboardData.widgets.forEach((widget, index) => {
+                if (widget.type === 'weekly') {
+                    const ctx = document.getElementById(`chart-weekly-${index}`);
+                    if (!ctx) return;
+                    if (chartInstances[`weekly-${index}`]) chartInstances[`weekly-${index}`].destroy();
+                    chartInstances[`weekly-${index}`] = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Bajarilgan', 'Qolgan', 'Odat %'],
+                            datasets: [{
+                                label: 'Natija',
+                                data: [
+                                    metrics.weeklyTodos,
+                                    Math.max(metrics.weeklyTotal - metrics.weeklyTodos, 0),
+                                    metrics.habitRate
+                                ],
+                                backgroundColor: ['#10b981', '#f59e0b', '#6366f1']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { beginAtZero: true, ticks: { color: '#a1a1aa' } },
+                                x: { ticks: { color: '#a1a1aa' } }
+                            }
+                        }
+                    });
+                }
+
+                if (widget.type === 'monthly') {
+                    const ctx = document.getElementById(`chart-monthly-${index}`);
+                    if (!ctx) return;
+                    if (chartInstances[`monthly-${index}`]) chartInstances[`monthly-${index}`].destroy();
+                    chartInstances[`monthly-${index}`] = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Progress', 'Maqsadlar', 'Vazifalar'],
+                            datasets: [{
+                                data: [metrics.progressAvg, metrics.goalsAvg, metrics.monthlyRate],
+                                backgroundColor: ['#10b981', '#6366f1', '#f59e0b']
+                            }]
+                        },
+                        options: {
+                            plugins: {
+                                legend: { labels: { color: '#a1a1aa' } }
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        // Weather live
+        const weatherCodeMap = {
+            0: { icon: '☀️', text: 'Ochiq' },
+            1: { icon: '🌤️', text: 'Asosan quyoshli' },
+            2: { icon: '⛅', text: 'Qisman bulutli' },
+            3: { icon: '☁️', text: 'Bulutli' },
+            45: { icon: '🌫️', text: 'Tuman' },
+            48: { icon: '🌫️', text: 'Muzli tuman' },
+            51: { icon: '🌦️', text: 'Yengil yomg\'ir' },
+            61: { icon: '🌧️', text: 'Yomg\'ir' },
+            71: { icon: '❄️', text: 'Qor' },
+            80: { icon: '🌦️', text: 'Yomg\'irli' },
+            95: { icon: '⛈️', text: 'Momaqaldiroq' }
+        };
+
+        let weatherTimer = null;
+
+        async function refreshWeatherWidgets() {
+            const weatherIndexes = [];
+            dashboardData.widgets.forEach((w, i) => {
+                if (w.type === 'weather') weatherIndexes.push(i);
+            });
+            weatherIndexes.forEach(i => refreshWeather(i));
+
+            if (weatherTimer) clearTimeout(weatherTimer);
+            // auto refresh every 15 minutes
+            weatherTimer = setTimeout(refreshWeatherWidgets, 15 * 60 * 1000);
+        }
+
+        async function refreshWeather(index) {
+            const widget = dashboardData.widgets[index];
+            if (!widget || widget.type !== 'weather') return;
+            const location = widget.data?.location || 'Farg\'ona';
+
+            const tempEl = document.getElementById(`weather-temp-${index}`);
+            const descEl = document.getElementById(`weather-desc-${index}`);
+            const iconEl = document.getElementById(`weather-icon-${index}`);
+            if (tempEl) tempEl.textContent = '...';
+            if (descEl) descEl.textContent = 'Yuklanmoqda...';
+
+            try {
+                const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=uz&format=json`);
+                const geo = await geoRes.json();
+                if (!geo.results || !geo.results.length) throw new Error('Topilmadi');
+                const { latitude, longitude } = geo.results[0];
+
+                const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code`);
+                const wjson = await wRes.json();
+                const temp = wjson.current?.temperature_2m;
+                const code = wjson.current?.weather_code;
+                const map = weatherCodeMap[code] || { icon: '🌤️', text: 'Ob-havo' };
+
+                if (tempEl) tempEl.textContent = `${Math.round(temp)}°C`;
+                if (descEl) descEl.textContent = map.text;
+                if (iconEl) iconEl.textContent = map.icon;
+            } catch (e) {
+                if (descEl) descEl.textContent = 'Topilmadi';
+                if (tempEl) tempEl.textContent = '--°C';
+            }
+        }
+
+        // Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show', 'success');
+            setTimeout(() => toast.classList.remove('show', 'success'), 2000);
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>

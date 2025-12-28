@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life OS - Personal Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <div class="sidebar-logo-icon">🌿</div>
+                <span>Life OS</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Asosiy</div>
+                <div class="nav-item active" data-filter="dashboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    Dashboard
+                </div>
+                <div class="nav-item" onclick="location.href='/calendar'">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Kalendar
+                </div>
+                <div class="nav-item" data-filter="todo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                    Vazifalar
+                </div>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Shaxsiy</div>
+                <div class="nav-item" data-filter="goals">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                    Maqsadlar
+                </div>
+                <div class="nav-item" data-filter="notes">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    Eslatmalar
+                </div>
+                <div class="nav-item" data-filter="habits">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                        <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                        <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                    </svg>
+                    Odatlar
+                </div>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Raqobat</div>
+                <div class="nav-item" onclick="location.href='/competition'">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    Raqobat
+                </div>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="theme-toggle">
+                <span>🌙 Dark Mode</span>
+                <span>On</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Top Bar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="breadcrumb">
+                    🏠 <span>Dashboard</span>
+                </div>
+            </div>
+            <div class="topbar-actions">
+                <div class="user-switcher" id="userSwitcher">
+                    <div class="current-user" onclick="toggleUserMenu()">
+                        <div class="user-avatar" id="userAvatar">👤</div>
+                        <span id="userName">Bekzod</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="user-menu" id="userMenu">
+                        <div class="user-menu-item" onclick="switchUser(1)">
+                            <div class="user-avatar">👨</div>
+                            <span>Bekzod</span>
+                            <span class="user-check" id="check1">✓</span>
+                        </div>
+                        <div class="user-menu-item" onclick="switchUser(2)">
+                            <div class="user-avatar">👩</div>
+                            <span>Shodiya</span>
+                            <span class="user-check" id="check2"></span>
+                        </div>
+                    </div>
+                </div>
+                <button class="topbar-btn" onclick="location.href='/competition'">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <span>Raqobat</span>
+                </button>
+                <button class="topbar-btn primary" onclick="openWidgetModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Widget qo'shish</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="page-content">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div class="page-cover">
+                    <img id="coverImage" src="" alt="Cover">
+                </div>
+                <div class="page-title-section">
+                    <div class="page-icon" id="pageIcon" onclick="openEmojiPicker(event, this, 'pageIcon')">🌿</div>
+                    <div style="flex: 1;">
+                        <div class="editable-field" onclick="startEdit(this, 'page-title')">
+                            <span class="edit-icon">✏️</span>
+                            <div class="page-title editable-input" id="pageTitle" contenteditable="false" 
+                                onblur="finishEdit(this, 'page-title')"
+                                onkeypress="if(event.key==='Enter') { event.preventDefault(); finishEdit(this, 'page-title'); }">Personal Life Dashboard</div>
+                        </div>
+                        <div class="editable-field" onclick="startEdit(this, 'page-description')" style="margin-top: 8px;">
+                            <span class="edit-icon">✏️</span>
+                            <div class="page-description editable-input" id="pageDescription" contenteditable="false"
+                                onblur="finishEdit(this, 'page-description')"
+                                onkeypress="if(event.key==='Enter') { event.preventDefault(); finishEdit(this, 'page-description'); }">Kundalik hayotingizni tartibga soling va maqsadlaringizga erishing</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Widget Grid -->
+            <div class="widget-grid" id="widgetGrid">
+                <!-- Widgets will be rendered here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Widget Modal -->
+    <div class="modal-overlay" id="widgetModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Widget qo'shish</h3>
+                <button class="modal-close" onclick="closeWidgetModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="widget-type-grid">
+                    <button class="widget-type-btn" onclick="addWidget('clock')">
+                        <div class="widget-type-icon">🕐</div>
+                        <div class="widget-type-name">Soat</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('todo')">
+                        <div class="widget-type-icon">✅</div>
+                        <div class="widget-type-name">Vazifalar</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('notes')">
+                        <div class="widget-type-icon">📝</div>
+                        <div class="widget-type-name">Eslatmalar</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('goals')">
+                        <div class="widget-type-icon">🎯</div>
+                        <div class="widget-type-name">Maqsadlar</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('habits')">
+                        <div class="widget-type-icon">💪</div>
+                        <div class="widget-type-name">Odatlar</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('progress')">
+                        <div class="widget-type-icon">📊</div>
+                        <div class="widget-type-name">Progress</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('quote')">
+                        <div class="widget-type-icon">💭</div>
+                        <div class="widget-type-name">Iqtibos</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('image')">
+                        <div class="widget-type-icon">🖼️</div>
+                        <div class="widget-type-name">Rasm</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('weather')">
+                        <div class="widget-type-icon">☀️</div>
+                        <div class="widget-type-name">Ob-havo</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('countdown')">
+                        <div class="widget-type-icon">⏳</div>
+                        <div class="widget-type-name">Countdown</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('weekly')">
+                        <div class="widget-type-icon">📆</div>
+                        <div class="widget-type-name">Haftalik</div>
+                    </button>
+                    <button class="widget-type-btn" onclick="addWidget('monthly')">
+                        <div class="widget-type-icon">🗓️</div>
+                        <div class="widget-type-name">Oylik</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emoji Picker -->
+    <div class="emoji-picker" id="emojiPicker">
+        <div class="emoji-grid" id="emojiGrid"></div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Hidden File Input -->
+    <input type="file" id="imageInput" accept="image/*" style="display: none;">
+    <input type="file" id="coverInput" accept="image/*" style="display: none;">
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+

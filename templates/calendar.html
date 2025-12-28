@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalendar - Life OS</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        .calendar-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .calendar-header h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .calendar-nav {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .calendar-nav button {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        
+        .calendar-nav button:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+        
+        .calendar-day-header {
+            text-align: center;
+            padding: 15px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        
+        .calendar-day {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            min-height: 120px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .calendar-day:hover {
+            border-color: var(--accent);
+            background: var(--bg-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+        
+        .calendar-day.today {
+            border-color: var(--accent);
+            background: var(--bg-hover);
+            box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+        
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+        
+        .calendar-day-number {
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .calendar-day-tasks {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .calendar-task-dot {
+            width: 100%;
+            padding: 4px 8px;
+            background: var(--accent);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: white;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .calendar-task-dot.completed {
+            background: var(--text-muted);
+            text-decoration: line-through;
+        }
+        
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-panel-card {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 25px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        
+        .stat-panel-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            border-color: var(--accent);
+        }
+        
+        .stat-panel-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            opacity: 0.1;
+            transition: opacity 0.3s;
+        }
+        
+        .stat-panel-card:hover::before {
+            opacity: 0.2;
+        }
+        
+        .stat-panel-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .stat-panel-title {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-panel-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 5px;
+        }
+        
+        .stat-panel-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+        
+        .stats-charts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 25px;
+        }
+        
+        .chart-card h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 250px;
+        }
+        
+        .mini-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .mini-stat {
+            background: var(--bg-tertiary);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .mini-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .mini-stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .stat-panel-card, .chart-card {
+            animation: fadeInUp 0.5s ease forwards;
+        }
+        
+        .stat-panel-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-panel-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-panel-card:nth-child(3) { animation-delay: 0.3s; }
+        .stat-panel-card:nth-child(4) { animation-delay: 0.4s; }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <div class="sidebar-logo-icon">🌿</div>
+                <span>Life OS</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Asosiy</div>
+                <div class="nav-item" onclick="location.href='/'">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    Dashboard
+                </div>
+                <div class="nav-item active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Kalendar
+                </div>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Raqobat</div>
+                <div class="nav-item" onclick="location.href='/competition'">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    Raqobat
+                </div>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="theme-toggle">
+                <span>🌙 Dark Mode</span>
+                <span>On</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="breadcrumb">
+                    📅 <span>Kalendar & Statistika</span>
+                </div>
+            </div>
+            <div class="topbar-actions">
+                <div class="user-switcher" id="userSwitcher">
+                    <div class="current-user" onclick="toggleUserMenu()">
+                        <div class="user-avatar" id="userAvatar">👤</div>
+                        <span id="userName">Bekzod</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="user-menu" id="userMenu">
+                        <div class="user-menu-item" onclick="switchUser(1)">
+                            <div class="user-avatar">👨</div>
+                            <span>Bekzod</span>
+                            <span class="user-check" id="check1">✓</span>
+                        </div>
+                        <div class="user-menu-item" onclick="switchUser(2)">
+                            <div class="user-avatar">👩</div>
+                            <span>Shodiya</span>
+                            <span class="user-check" id="check2"></span>
+                        </div>
+                    </div>
+                </div>
+                <button class="topbar-btn" onclick="location.href='/competition'">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <span>Raqobat</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="page-content">
+            <!-- Stats Panel -->
+            <div class="stats-panel">
+                <div class="stat-panel-card">
+                    <div class="stat-panel-icon">📊</div>
+                    <div class="stat-panel-title">Shu oy vazifalar</div>
+                    <div class="stat-panel-value" id="monthTasks">0</div>
+                    <div class="stat-panel-desc">Jami bajarildi: <span id="monthTotal">0</span></div>
+                </div>
+                <div class="stat-panel-card">
+                    <div class="stat-panel-icon">✅</div>
+                    <div class="stat-panel-title">Bajarilish foizi</div>
+                    <div class="stat-panel-value" id="monthRate">0%</div>
+                    <div class="stat-panel-desc">O'rtacha natija</div>
+                </div>
+                <div class="stat-panel-card">
+                    <div class="stat-panel-icon">🔥</div>
+                    <div class="stat-panel-title">Eng yaxshi kun</div>
+                    <div class="stat-panel-value" id="bestDay">-</div>
+                    <div class="stat-panel-desc">Maksimal samaradorlik</div>
+                </div>
+                <div class="stat-panel-card">
+                    <div class="stat-panel-icon">📈</div>
+                    <div class="stat-panel-title">Trend</div>
+                    <div class="stat-panel-value" id="trendValue">↗️</div>
+                    <div class="stat-panel-desc" id="trendDesc">Yaxshilanmoqda</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="stats-charts">
+                <div class="chart-card">
+                    <h3>📆 Haftalik Natijalar</h3>
+                    <div class="chart-container">
+                        <canvas id="weeklyChart"></canvas>
+                    </div>
+                    <div class="mini-stats">
+                        <div class="mini-stat">
+                            <div class="mini-stat-value" id="weekCompleted">0</div>
+                            <div class="mini-stat-label">Bajarildi</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-value" id="weekPending">0</div>
+                            <div class="mini-stat-label">Qoldi</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <h3>🗓️ Oylik Statistika</h3>
+                    <div class="chart-container">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                    <div class="mini-stats">
+                        <div class="mini-stat">
+                            <div class="mini-stat-value" id="monthCompleted">0</div>
+                            <div class="mini-stat-label">Bajarilgan</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-value" id="avgPerDay">0</div>
+                            <div class="mini-stat-label">Kunlik o'rtacha</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar -->
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <h2 id="calendarTitle">Yanvar 2025</h2>
+                    <div class="calendar-nav">
+                        <button onclick="previousMonth()">◀ Oldingi</button>
+                        <button onclick="today()">Bugun</button>
+                        <button onclick="nextMonth()">Keyingi ▶</button>
+                    </div>
+                </div>
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- Calendar will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentDate = new Date();
+        let tasks = [];
+        let dailyStats = {};
+        let weeklyChart, monthlyChart;
+        let currentUserId = parseInt(localStorage.getItem('currentUserId') || '1');
+        const users = {
+            1: { id: 1, name: 'Bekzod', avatar: '👨' },
+            2: { id: 2, name: 'Shodiya', avatar: '👩' }
+        };
+
+        async function loadTasks() {
+            try {
+                const response = await fetch('/api/todos');
+                tasks = await response.json();
+            } catch (err) {
+                console.error('Failed to load tasks', err);
+                tasks = [];
+            }
+            
+            await loadDailyStats();
+            renderCalendar();
+            updateStats();
+            renderCharts();
+            updateUserUI();
+        }
+
+        async function loadDailyStats() {
+            try {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                
+                const response = await fetch(`/api/daily-stats?user_id=${currentUserId}&start_date=${firstDay.toISOString().split('T')[0]}&end_date=${lastDay.toISOString().split('T')[0]}`);
+                const stats = await response.json();
+                
+                dailyStats = {};
+                stats.forEach(stat => {
+                    dailyStats[stat.date] = stat;
+                });
+            } catch (err) {
+                console.error('Failed to load daily stats', err);
+                dailyStats = {};
+            }
+        }
+
+        function updateUserUI() {
+            const user = users[currentUserId];
+            if (user) {
+                document.getElementById('userName').textContent = user.name;
+                document.getElementById('userAvatar').textContent = user.avatar;
+                
+                document.getElementById('check1').style.opacity = currentUserId === 1 ? '1' : '0';
+                document.getElementById('check2').style.opacity = currentUserId === 2 ? '1' : '0';
+                
+                document.querySelectorAll('.user-menu-item').forEach((item, idx) => {
+                    item.classList.toggle('active', (idx + 1) === currentUserId);
+                });
+            }
+        }
+
+        function toggleUserMenu() {
+            document.getElementById('userMenu').classList.toggle('active');
+        }
+
+        async function switchUser(userId) {
+            if (currentUserId === userId) {
+                toggleUserMenu();
+                return;
+            }
+            
+            currentUserId = userId;
+            localStorage.setItem('currentUserId', currentUserId.toString());
+            
+            await fetch('/api/user/switch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            }).catch(() => {});
+            
+            await loadTasks();
+            toggleUserMenu();
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.user-switcher')) {
+                document.getElementById('userMenu').classList.remove('active');
+            }
+        });
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startDayOfWeek = firstDay.getDay() || 7;
+            
+            const prevLastDay = new Date(year, month, 0).getDate();
+            
+            document.getElementById('calendarTitle').textContent = 
+                firstDay.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' });
+            
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+            
+            // Day headers
+            ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba', 'Yakshanba'].forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-day-header';
+                header.textContent = day;
+                grid.appendChild(header);
+            });
+            
+            // Previous month days
+            for (let i = startDayOfWeek - 2; i >= 0; i--) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day other-month';
+                day.innerHTML = `<div class="calendar-day-number">${prevLastDay - i}</div>`;
+                grid.appendChild(day);
+            }
+            
+            // Current month days
+            const today = new Date();
+            for (let i = 1; i <= daysInMonth; i++) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day';
+                
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const isToday = year === today.getFullYear() && month === today.getMonth() && i === today.getDate();
+                
+                if (isToday) day.classList.add('today');
+                
+                const dayTasks = tasks.filter(t => t.createdAt && t.createdAt.startsWith(dateStr));
+                const stats = dailyStats[dateStr];
+                
+                let statsHTML = '';
+                if (stats) {
+                    const rate = stats.completion_rate || 0;
+                    const rateColor = rate >= 80 ? 'var(--success)' : rate >= 50 ? 'var(--accent)' : 'var(--accent-tertiary)';
+                    statsHTML = `
+                        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem;">
+                                <span style="color: var(--text-muted);">📊 ${stats.todos_completed}/${stats.todos_total}</span>
+                                <span style="color: ${rateColor}; font-weight: 600;">${rate}%</span>
+                            </div>
+                            ${stats.habits_total > 0 ? `
+                                <div style="margin-top: 4px; font-size: 0.7rem; color: var(--text-muted);">
+                                    💪 ${stats.habits_completed}/${stats.habits_total}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+                
+                day.innerHTML = `
+                    <div class="calendar-day-number">${i}</div>
+                    <div class="calendar-day-tasks">
+                        ${dayTasks.slice(0, 2).map(t => `
+                            <div class="calendar-task-dot ${t.completed ? 'completed' : ''}" title="${t.text}">
+                                ${t.text}
+                            </div>
+                        `).join('')}
+                        ${dayTasks.length > 2 ? `<div class="calendar-task-dot" style="background:var(--text-muted); font-size:0.7rem;">+${dayTasks.length - 2}</div>` : ''}
+                    </div>
+                    ${statsHTML}
+                `;
+                
+                grid.appendChild(day);
+            }
+            
+            // Next month days
+            const remaining = 7 - (grid.children.length % 7);
+            if (remaining < 7) {
+                for (let i = 1; i <= remaining; i++) {
+                    const day = document.createElement('div');
+                    day.className = 'calendar-day other-month';
+                    day.innerHTML = `<div class="calendar-day-number">${i}</div>`;
+                    grid.appendChild(day);
+                }
+            }
+        }
+
+        function updateStats() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            // Monthly stats
+            const monthTasks = tasks.filter(t => {
+                if (!t.createdAt) return false;
+                const d = new Date(t.createdAt);
+                return d.getFullYear() === year && d.getMonth() === month;
+            });
+            
+            const completed = monthTasks.filter(t => t.completed).length;
+            const total = monthTasks.length;
+            const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+            
+            document.getElementById('monthTasks').textContent = completed;
+            document.getElementById('monthTotal').textContent = total;
+            document.getElementById('monthCompleted').textContent = completed;
+            document.getElementById('monthRate').textContent = rate + '%';
+            
+            // Best day
+            const dayStats = {};
+            monthTasks.forEach(t => {
+                const day = t.createdAt.split('T')[0];
+                if (!dayStats[day]) dayStats[day] = { total: 0, completed: 0 };
+                dayStats[day].total++;
+                if (t.completed) dayStats[day].completed++;
+            });
+            
+            let bestDay = null;
+            let bestRate = 0;
+            Object.entries(dayStats).forEach(([day, stats]) => {
+                const dayRate = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
+                if (dayRate > bestRate) {
+                    bestRate = dayRate;
+                    bestDay = new Date(day).getDate();
+                }
+            });
+            
+            document.getElementById('bestDay').textContent = bestDay || '-';
+            
+            // Trend
+            const lastWeekRate = rate; // Simplified
+            const trend = rate >= 70 ? '↗️' : rate >= 50 ? '→' : '↘️';
+            const trendText = rate >= 70 ? 'Ajoyib!' : rate >= 50 ? 'Yaxshi' : 'Yaxshilash kerak';
+            document.getElementById('trendValue').textContent = trend;
+            document.getElementById('trendDesc').textContent = trendText;
+            
+            // Weekly stats
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            const weekTasks = tasks.filter(t => new Date(t.createdAt) >= weekAgo);
+            const weekCompleted = weekTasks.filter(t => t.completed).length;
+            const weekPending = weekTasks.length - weekCompleted;
+            
+            document.getElementById('weekCompleted').textContent = weekCompleted;
+            document.getElementById('weekPending').textContent = weekPending;
+            document.getElementById('avgPerDay').textContent = (completed / new Date().getDate()).toFixed(1);
+        }
+
+        function renderCharts() {
+            // Weekly chart
+            const weeklyCtx = document.getElementById('weeklyChart');
+            if (weeklyChart) weeklyChart.destroy();
+            
+            const last7Days = [];
+            const last7Completed = [];
+            const last7Total = [];
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                last7Days.push(date.toLocaleDateString('uz-UZ', { weekday: 'short' }));
+                
+                const dayTasks = tasks.filter(t => t.createdAt && t.createdAt.startsWith(dateStr));
+                last7Completed.push(dayTasks.filter(t => t.completed).length);
+                last7Total.push(dayTasks.length);
+            }
+            
+            weeklyChart = new Chart(weeklyCtx, {
+                type: 'bar',
+                data: {
+                    labels: last7Days,
+                    datasets: [{
+                        label: 'Bajarilgan',
+                        data: last7Completed,
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }, {
+                        label: 'Jami',
+                        data: last7Total,
+                        backgroundColor: 'rgba(99, 102, 241, 0.3)',
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#a1a1aa' } }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: { color: '#a1a1aa' },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        x: { 
+                            ticks: { color: '#a1a1aa' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+            
+            // Monthly chart (doughnut)
+            const monthlyCtx = document.getElementById('monthlyChart');
+            if (monthlyChart) monthlyChart.destroy();
+            
+            const monthTasks = tasks.filter(t => {
+                const d = new Date(t.createdAt);
+                return d.getMonth() === currentDate.getMonth();
+            });
+            
+            const monthCompleted = monthTasks.filter(t => t.completed).length;
+            const monthPending = monthTasks.length - monthCompleted;
+            
+            monthlyChart = new Chart(monthlyCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Bajarilgan', 'Jarayonda', 'Qolgan'],
+                    datasets: [{
+                        data: [monthCompleted, monthPending, Math.max(0, monthTasks.length * 0.2)],
+                        backgroundColor: [
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(239, 68, 68, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(16, 185, 129, 1)',
+                            'rgba(245, 158, 11, 1)',
+                            'rgba(239, 68, 68, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            position: 'bottom',
+                            labels: { color: '#a1a1aa', padding: 15 }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function previousMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            await loadDailyStats();
+            renderCalendar();
+            updateStats();
+            renderCharts();
+        }
+
+        async function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            await loadDailyStats();
+            renderCalendar();
+            updateStats();
+            renderCharts();
+        }
+
+        async function today() {
+            currentDate = new Date();
+            await loadDailyStats();
+            renderCalendar();
+            updateStats();
+            renderCharts();
+        }
+
+        loadTasks();
+    </script>
+</body>
+</html>
