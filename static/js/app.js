@@ -106,15 +106,25 @@ async function loadData() {
     const key = `lifeos_dashboard_${currentUserId}`;
     const saved = localStorage.getItem(key);
     if (saved) {
+        // Load saved data for this user
         dashboardData = JSON.parse(saved);
     } else {
-        dashboardData.widgets = [...defaultWidgets];
+        // Initialize with default data for new user
+        dashboardData = {
+            pageIcon: '🌿',
+            pageTitle: 'Personal Life Dashboard',
+            pageDescription: 'Kundalik hayotingizni tartibga soling va maqsadlaringizga erishing',
+            coverImage: 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=1200&h=400&fit=crop',
+            widgets: [...defaultWidgets]
+        };
+        // Save initial data for this user
+        await saveData(true);
     }
     updateUserUI();
 }
 
 // Save Data
-async function saveData() {
+async function saveData(silent = false) {
     const key = `lifeos_dashboard_${currentUserId}`;
     localStorage.setItem(key, JSON.stringify(dashboardData));
     
@@ -129,7 +139,9 @@ async function saveData() {
         // Ignore if backend not available
     }
     
-    showToast('Saqlandi!');
+    if (!silent) {
+        showToast('Saqlandi!');
+    }
 }
 
 // User Management
@@ -154,14 +166,14 @@ function toggleUserMenu() {
     menu.classList.toggle('active');
 }
 
-function switchUser(userId) {
+async function switchUser(userId) {
     if (currentUserId === userId) {
         toggleUserMenu();
         return;
     }
     
-    // Save current user data
-    saveData();
+    // Save current user data FIRST (wait for it to complete, silently)
+    await saveData(true);
     
     // Switch user
     currentUserId = userId;
@@ -174,8 +186,10 @@ function switchUser(userId) {
         body: JSON.stringify({ user_id: userId })
     }).catch(() => {});
     
-    // Load new user data
-    loadData();
+    // Load new user data (wait for it to complete)
+    await loadData();
+    
+    // Then render dashboard with new user's data
     renderDashboard();
     
     toggleUserMenu();
@@ -636,6 +650,8 @@ function addTodoItem(widgetIndex, input) {
     input.value = '';
     saveData();
     renderDashboard();
+    // Update stats when new todo is added
+    saveDailyStats();
 }
 
 function toggleTodo(widgetIndex, itemIndex) {
@@ -648,6 +664,8 @@ function toggleTodo(widgetIndex, itemIndex) {
     }
     saveData();
     renderDashboard();
+    // Update stats immediately when todo changes
+    saveDailyStats();
 }
 
 function updateTodoText(widgetIndex, itemIndex, value) {
@@ -664,6 +682,8 @@ function deleteTodo(widgetIndex, itemIndex) {
     dashboardData.widgets[widgetIndex].data.items.splice(itemIndex, 1);
     saveData();
     renderDashboard();
+    // Update stats when todo is deleted
+    saveDailyStats();
 }
 
 // Notes Actions
@@ -699,6 +719,8 @@ function updateGoalProgressSlider(widgetIndex, goalIndex, value) {
     dashboardData.widgets[widgetIndex].data.items[goalIndex].progress = parseInt(value);
     saveData();
     renderDashboard();
+    // Update stats when goal progress changes
+    saveDailyStats();
 }
 
 function updateGoalProgress(widgetIndex, goalIndex, event) {
@@ -716,6 +738,8 @@ function updateGoalProgress(widgetIndex, goalIndex, event) {
     dashboardData.widgets[widgetIndex].data.items[goalIndex].progress = clampedProgress;
     saveData();
     renderDashboard();
+    // Update stats when goal progress changes
+    saveDailyStats();
 }
 
 // Habits Actions
@@ -743,6 +767,8 @@ function toggleHabitDay(widgetIndex, habitIndex, dayIndex) {
         !dashboardData.widgets[widgetIndex].data.items[habitIndex].days[dayIndex];
     saveData();
     renderDashboard();
+    // Update stats when habit changes
+    saveDailyStats();
 }
 
 // Quote Actions
@@ -1218,9 +1244,10 @@ function calculateDailyStats() {
     dashboardData.widgets.forEach(widget => {
         if (widget.type === 'todo' && widget.data?.items) {
             widget.data.items.forEach(item => {
-                if (item.createdAt && item.createdAt.startsWith(today)) {
-                    todos_total++;
-                    if (item.completed) todos_completed++;
+                // Count all todos for today's stats (shows current state)
+                todos_total++;
+                if (item.completed) {
+                    todos_completed++;
                 }
             });
         }
@@ -1265,17 +1292,28 @@ function calculateDailyStats() {
 async function saveDailyStats() {
     try {
         const stats = calculateDailyStats();
-        const response = await fetch('/api/daily-stats/calculate', {
+        
+        // Add current user_id to stats
+        stats.user_id = currentUserId;
+        
+        // Save to backend using POST /api/daily-stats
+        const response = await fetch('/api/daily-stats', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(stats)
         });
         
         if (response.ok) {
-            console.log('Daily stats saved:', stats);
+            const result = await response.json();
+            console.log('Daily stats saved successfully:', result);
+            return true;
+        } else {
+            console.error('Failed to save daily stats:', response.status, response.statusText);
+            return false;
         }
     } catch (err) {
         console.error('Failed to save daily stats:', err);
+        return false;
     }
 }
 

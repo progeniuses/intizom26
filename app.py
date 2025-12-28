@@ -376,8 +376,10 @@ def get_monthly_stats():
 
 @app.route('/api/daily-stats', methods=['POST'])
 def save_daily_stats():
-    user_id = session.get('user_id', 1)
+    # Get user_id from request body or session
     data = request.json
+    user_id = data.get('user_id') or session.get('user_id', 1)
+    user_id = int(user_id)
     
     today = datetime.utcnow().date()
     
