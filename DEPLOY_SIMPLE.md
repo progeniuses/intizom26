@@ -30,8 +30,12 @@ git push -u origin main
    - **Name:** `lifeos` (yoki istagan nomingiz)
    - **Environment:** `Python 3`
    - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `gunicorn app:app`
+   - **Start Command:** `gunicorn app:app --bind 0.0.0.0:$PORT`
    - **Plan:** `Free`
+   
+   **YOKI** faqat **Procfile** ishlatish (tavsiya etiladi):
+   - Start Command'ni bo'sh qoldiring yoki `gunicorn app:app` qo'ying
+   - Procfile avtomatik ishlatiladi
 
 ### B) Environment Variables (faqat 1 ta!):
 
@@ -116,9 +120,20 @@ Render avtomatik rebuild qiladi!
 
 ## 🐛 Muammo bo'lsa:
 
+### "Not Found" xatosi:
+1. **Procfile** mavjudligini tekshiring
+2. **Start Command** to'g'ri ekanligini tekshiring:
+   - `gunicorn app:app --bind 0.0.0.0:$PORT`
+   - Yoki faqat `gunicorn app:app` (Procfile ishlatiladi)
+3. **Port** environment variable avtomatik o'rnatiladi ($PORT)
+4. **Logs** tekshiring: Render dashboard → Logs
+
+### Boshqa muammolar:
 1. **Logs** tekshiring: Render dashboard → Logs
 2. **SECRET_KEY** to'g'ri ekanligini tekshiring
 3. **DATABASE_URL** ni o'chirib tashlang (agar qo'shilgan bo'lsa)
+4. **Build logs** tekshiring - dependencies o'rnatilganligini tekshiring
+5. **Health check:** `https://your-app.onrender.com/health` - `{"status": "ok"}` qaytishi kerak
 
 ---
 

@@ -5,7 +5,10 @@ from datetime import datetime, timedelta
 import os
 import json
 
-app = Flask(__name__)
+app = Flask(__name__, 
+            static_folder='static',
+            static_url_path='/static',
+            template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # Database configuration: SQLite (default) or PostgreSQL
@@ -106,6 +109,16 @@ def competition_page():
 @app.route('/stats')
 def stats_page():
     return render_template('stats.html')
+
+# 404 Error Handler
+@app.errorhandler(404)
+def not_found(error):
+    return render_template('index.html'), 404
+
+# Health check endpoint (Render uchun)
+@app.route('/health')
+def health():
+    return jsonify({'status': 'ok', 'message': 'Life OS is running'}), 200
 
 # API Routes
 @app.route('/api/dashboard', methods=['GET'])
@@ -471,8 +484,17 @@ def calculate_daily_stats():
         }
     })
 
+# Database initialization
+with app.app_context():
+    db.create_all()
+
+# Production server (Gunicorn) uchun
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Local development uchun
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)
+else:
+    # Production uchun (Gunicorn)
+    # Database tables yaratilganligini ta'minlash
+    pass
 
